@@ -1,0 +1,5 @@
+OLD/*
+.vscode/*
+*/.ipynb_checkpoints/*
+build/*
+.DS_Store
