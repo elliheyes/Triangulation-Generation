@@ -170,19 +170,15 @@ def two_face_secondary_cone(poly, two_face, simps):
     # get the two-face triangulation simplices in terms of two-face indices
     two_simps = [[face.points_to_labels(poly.points()[simp[i]]) for i in range(3)] for simp in simps]
     two_simps = [set(s) for s in two_simps]
-    
-    simps = [set(s) for s in simps]
-    
+   
     full_v = np.zeros(len(pts_ext), dtype=int)
     m = np.zeros((2+1, 2+2), dtype=int)
     null_vecs = set()
-    for i in range(len(simps)):
-        for j in range(i+1,len(simps)):
+    for i in range(len(two_simps)):
+        for j in range(i+1,len(two_simps)):
             # define the simplices
             two_s1 = two_simps[i]
             two_s2 = two_simps[j]
-            s1 = simps[i]
-            s2 = simps[j]
 
             # eunsre that the simplices have a large enough intersection
             two_comm_pts = two_s1 & two_s2
@@ -208,15 +204,14 @@ def two_face_secondary_cone(poly, two_face, simps):
                 v //= g
 
             # construct the full vector (including all points)
-            diff_pts = list(s1 ^ s2)
-            comm_pts = list(s1 & s2)
-            for k,pt in enumerate(diff_pts):    full_v[pt] = v[k]
-            for k,pt in enumerate(comm_pts):    full_v[pt] = v[k+2]
+            for k,pt in enumerate(two_diff_pts):    full_v[poly.points_to_labels(face.points()[pt])] = v[k]
+            for k,pt in enumerate(two_comm_pts):    full_v[poly.points_to_labels(face.points()[pt])] = v[k+2]
             
             null_vecs.add(tuple(full_v))
             
-            for k,pt in enumerate(diff_pts):    full_v[pt] = 0
-            for k,pt in enumerate(comm_pts):    full_v[pt] = 0
+            for k,pt in enumerate(two_diff_pts):    full_v[poly.points_to_labels(face.points()[pt])] = 0
+            for k,pt in enumerate(two_diff_pts):    full_v[poly.points_to_labels(face.points()[pt])] = 0
+    
     
     null_vecs = list(null_vecs)
     if len(null_vecs):
