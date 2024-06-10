@@ -20,7 +20,7 @@ class Environment(object):
         """
 
     @abc.abstractmethod
-    def R(self, state) -> Tuple[float, bool]:
+    def fitness(self, state) -> Tuple[float, bool]:
         """Computes fitness function.
 
         @param state: Specifies current state.
@@ -56,18 +56,21 @@ class MultiEnvironment(Environment):
     def _combine_r_vals(r_val_1, r_val_2):
         return r_val_1[0] + r_val_2[0], r_val_1[1] & r_val_2[1]
 
-    def R(self, state) -> Tuple[float, bool]:
+    def fitness(self, state) -> Tuple[float, bool]:
         """
         @params state: List of states.
         """
         r_val = (0.0, True)
 
         for i, environment in enumerate(self._environments):
-            r_val_curr = environment.R(state[i])
+            r_val_curr = environment.fitness(state[i])
             r_val = self._combine_r_vals(
                 r_val_curr, r_val)
             # r_val += r_val_curr
             # terminated &= terminated_curr
+
+        # TODO compatibility.
+        # NOTE: In some cases doing one search depends if the other one is valid.
 
         return r_val
 
@@ -88,8 +91,8 @@ class MultiEnvironment(Environment):
         """
         self._environments.append(other)
 
-    def __add__(self, other: Environment):
-        self.add(other)
+    # def __add__(self, other: Environment):
+        # self.add(other)
 
 
 class SubpolytopeEnvironment(Environment):
@@ -124,7 +127,7 @@ class SubpolytopeEnvironment(Environment):
                 vertices.append(pt)
         return np.asarray(vertices)
 
-    def R(self, state):
+    def fitness(self, state):
         vertices = self.intersect(state)
 
         reward = 0.0
@@ -153,7 +156,7 @@ class SubpolytopeEnvironment(Environment):
         new_state = deepcopy(state)
         new_state[action] = ((new_state[action] + 1) % (self._points.shape[0]))
 
-        return new_state, self.R(new_state)
+        return new_state, self.fitness(new_state)
 
     @property
     def num_actions(self):
@@ -174,10 +177,12 @@ if __name__ == "__main__":
         [-1,-1,-1,-1]])
     subpoly = SubpolytopeEnvironment(p, 2)
     state = subpoly.random_state()
-    print(subpoly.R(state))
+    print(subpoly.fitness(state))
 
     multi = MultiEnvironment([subpoly, subpoly])
-    print(multi.R([state, state]))
+    print(multi.fitness([state, state]))
 
+    multi.add(subpoly)
+    multi.add(subpoly)
     random_multi_state = multi.random_state()
-    print(multi.R(random_multi_state))
+    print(multi.fitness(random_multi_state), random_multi_state)
