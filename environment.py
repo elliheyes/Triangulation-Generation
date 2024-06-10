@@ -71,6 +71,7 @@ class MultiEnvironment(Environment):
 
         # TODO compatibility.
         # NOTE: In some cases doing one search depends if the other one is valid.
+        # TODO: make it into a graph with (u->v)∈E if v depends on u. Pass path to root.
 
         return r_val
 
@@ -91,8 +92,9 @@ class MultiEnvironment(Environment):
         """
         self._environments.append(other)
 
-    # def __add__(self, other: Environment):
-        # self.add(other)
+    def __iadd__(self, other: Environment):
+        self.add(other)
+        return self
 
 
 class SubpolytopeEnvironment(Environment):
@@ -183,6 +185,6 @@ if __name__ == "__main__":
     print(multi.fitness([state, state]))
 
     multi.add(subpoly)
-    multi.add(subpoly)
+    multi += subpoly
     random_multi_state = multi.random_state()
     print(multi.fitness(random_multi_state), random_multi_state)
