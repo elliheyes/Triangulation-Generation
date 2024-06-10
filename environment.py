@@ -14,6 +14,12 @@ from notebooks.integer_rref import i4mat_rref
 
 class Environment(object):
     @abc.abstractmethod
+    def random_state():
+        """
+        Generates a random state (or a list thereof).
+        """
+
+    @abc.abstractmethod
     def R(self, state) -> Tuple[float, bool]:
         """Computes fitness function.
 
@@ -42,6 +48,9 @@ class Environment(object):
 class MultiEnvironment(Environment):
     def __init__(self, environments: List[Environment]):
         self._environments = environments
+
+    def random_state(self):
+        return [*map(lambda x: x.random_state(), self._environments)]
 
     @staticmethod
     def _combine_r_vals(r_val_1, r_val_2):
@@ -169,3 +178,6 @@ if __name__ == "__main__":
 
     multi = MultiEnvironment([subpoly, subpoly])
     print(multi.R([state, state]))
+
+    random_multi_state = multi.random_state()
+    print(multi.R(random_multi_state))
