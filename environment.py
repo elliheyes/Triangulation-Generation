@@ -5,6 +5,7 @@ environment.py
 
 import abc
 from copy import deepcopy
+from functools import reduce
 from typing import Tuple, List
 
 import numpy as np
@@ -95,6 +96,10 @@ class MultiEnvironment(Environment):
     def __iadd__(self, other: Environment):
         self.add(other)
         return self
+
+    @property
+    def num_actions(self):
+        return reduce(lambda x,y: x*y, map(lambda x: x.num_actions, self._environments))
 
 
 class SubpolytopeEnvironment(Environment):
@@ -188,3 +193,4 @@ if __name__ == "__main__":
     multi += subpoly
     random_multi_state = multi.random_state()
     print(multi.fitness(random_multi_state), random_multi_state)
+    print(multi.num_actions)

@@ -60,3 +60,14 @@ def train_agent(env: Environment, agent: Agent, num_epochs = 1024, max_steps = 3
         if agent.current_memory_size > min_memory_size:
             loss_vals.append([epoch, total_loss / (count+1e-10)])
     return np.asarray(loss_vals)
+
+
+def walk_agent(state, env: Environment, agent: Agent, max_steps = 32):
+    path = [state]
+    for _ in range(max_steps):
+        action = agent.act(state)
+        state, (_, done) = env.act(state, action)
+        path.append(state)
+        if done:
+            break
+    return path
