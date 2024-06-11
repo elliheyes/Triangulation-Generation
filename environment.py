@@ -232,11 +232,11 @@ class HTriangulationEnvironment(Environment):
     def fitness(self, state):
         triang = self._p.triangulate(heights = state, check_heights=False)
 
-        reward = 0.0
+        reward = -1.0
         if triang.is_fine():
-            reward += 1.0
+            reward += 1.5
         if triang.is_star():
-            reward += 1.0
+            reward += 1.5
         # # Always true
         # if triang.is_regular():
         #     reward += 1.0

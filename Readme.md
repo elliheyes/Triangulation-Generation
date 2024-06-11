@@ -2,7 +2,7 @@
 
 In this package we use a deep Q-learning reinforcement learning model to generate fine regular star triangulations of reflexive polytopes. These triangulations provide resolutions to non-terminal singularities in the ambient toric Fano variety and Calabi-Yau hypersurfaces constructed from the polytope.
 
-One can also look for added geometric information, such as fibration structures in the Calabi-Yau hypersurfaces and holomorphic vector bundles that satisfy the anomaly cancellation and slope stability conditions in E8 heterotic string compactification.
+One can also look for added geometric information, such as fibration structures in the Calabi-Yau hypersurfaces and holomorphic vector bundles that satisfy the anomaly cancellation and slope stability conditions in $E_8$ heterotic string compactification.
 
 For more information, please see the arxiv preprint - [arXiv:2405.21017](https://arxiv.org/abs/2405.21017).
 
@@ -14,9 +14,9 @@ For more information, please see the arxiv preprint - [arXiv:2405.21017](https:/
 Currently supported environments are:
 |Environment | Description| Arguments |
 | --- | --- | --- |
-| ```TriangulationEnvironment(```<br>&ensp;```polytope)```| Uses two-face encoding for generating triangulations. | **polytope**: Polytope. |
-| ```HTriangulationEnvironment(```<br>&ensp;```polytope)``` | Uses height encoding for generating triangulations. | **polytope**: Polytope. |
-| ```SubpolytopeEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | Uses subspace encoding to generate subpolytope. | **polytope**: Polytope.<br>**fibration_dim**: Dimension of subpolytope. |
+| ```TriangulationEnvironment(```<br>&ensp;```polytope)```| Uses two-face encoding for generating triangulations. | - **polytope**: Polytope. |
+| ```HTriangulationEnvironment(```<br>&ensp;```polytope)``` | Uses height encoding for generating triangulations. | - **polytope**: Polytope. |
+| ```SubpolytopeEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | Uses subspace encoding to generate subpolytope. | - **polytope**: Polytope.<br>- **fibration_dim**: Dimension of subpolytope. |
 
 An example code for generating subpolytopes is shown below:
 ```python

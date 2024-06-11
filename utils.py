@@ -56,7 +56,7 @@ def train_agent(env: Environment, agent: Agent, num_epochs = 1024, max_steps = 3
             if terminated:
                 break
         if verbosity > 0:
-            epochs.set_description(f"Epoch {epoch}, loss = {total_loss / (count+1e-10):.02f}")
+            epochs.set_description(f"Epoch {epoch}, loss = {total_loss / (count+1e-10):e}")
         if agent.current_memory_size > min_memory_size:
             loss_vals.append([epoch, total_loss / (count+1e-10)])
     return np.asarray(loss_vals)
