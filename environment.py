@@ -17,7 +17,7 @@ from notebooks.integer_rref import i4mat_rref
 
 class Environment(object):
     @abc.abstractmethod
-    def random_state():
+    def random_state(self):
         """
         Generates a random state.
         """
@@ -219,6 +219,43 @@ class TriangulationEnvironment(Environment):
     def num_actions(self):
         return self._max_num_triangs
 
+
+class HTriangulationEnvironment(Environment):
+    def __init__(self, polytope: Polytope, step_size: float = 0.5):
+        self._p = polytope
+        self._num_actions = polytope.points().shape[0]
+        self._step_size = step_size
+
+    def random_state(self):
+        return np.random.random(self._num_actions)
+
+    def fitness(self, state):
+        triang = self._p.triangulate(heights = state, check_heights=False)
+
+        reward = 0.0
+        if triang.is_fine():
+            reward += 1.0
+        if triang.is_star():
+            reward += 1.0
+        # # Always true
+        # if triang.is_regular():
+        #     reward += 1.0
+
+        return reward, reward == 2.0
+
+    def act(self, state, action):
+        shift = np.zeros(self._num_actions)
+        sgn = 1.0
+        if action >= self._num_actions:
+            sgn = -1.0
+        shift[action % self._num_actions] = sgn*self._step_size
+
+        new_state = state + shift
+        return new_state, self.fitness(new_state)
+
+    @property
+    def num_actions(self):
+        return self._num_actions*2
 
 
 class FibrationEnvironment(MultiEnvironment):
