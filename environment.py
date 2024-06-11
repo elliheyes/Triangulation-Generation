@@ -8,6 +8,8 @@ from copy import deepcopy
 from functools import reduce
 from typing import Tuple, List
 
+from Elli import utils
+
 import numpy as np
 from cytools import Polytope
 from notebooks.integer_rref import i4mat_rref
@@ -174,23 +176,37 @@ class SubpolytopeEnvironment(Environment):
         return [i for i in range(self._d)]
 
 
+class TriangulationEnvironment(Environment):
+    def __init__(self, polytope: Environment):
+        self._p = polytope
+        self._two_face_Ts = utils.get_two_face_triangs(polytope)
+        self._max_num_triangs = max(len(x) for x in self._two_face_Ts)
+        self._action_list = utils.get_T_actions(self._two_face_Ts)
+
+    def random_state(self):
+        return utils.random_T_state(self._two_face_Ts, self._max_num_triangs)
+
+    def fitness(self, state) -> Tuple[float, bool]:
+        f_val = utils.T_fitness(self._p, self._two_face_Ts, state)
+        return f_val, f_val == 1
+
+    def act(self, state, action) -> Tuple[List, float]:
+        new_state = utils.T_act(state, self._action_list[action])
+        return new_state, self.fitness(new_state)
+
+    @property
+    def num_actions(self):
+        return self._max_num_triangs
+
+
+
 if __name__ == "__main__":
-    p = Polytope([
-        [1,0,0,0],
-        [0,1,0,0],
-        [0,0,1,0],
-        [0,0,0,1],
-        [-1,-1,0,0],
-        [-1,-1,-1,-1]])
-    subpoly = SubpolytopeEnvironment(p, 2)
-    state = subpoly.random_state()
-    print(subpoly.fitness(state))
+    from cytools import fetch_polytopes
+    all_polys = fetch_polytopes(h11=3, lattice="N", limit=100, as_list=True)
+    p = all_polys[15]
 
-    multi = MultiEnvironment([subpoly, subpoly])
-    print(multi.fitness([state, state]))
-
-    multi.add(subpoly)
-    multi += subpoly
-    random_multi_state = multi.random_state()
-    print(multi.fitness(random_multi_state), random_multi_state)
-    print(multi.num_actions)
+    t_env = TriangulationEnvironment(p)
+    state = t_env.random_state()
+    print(state)
+    print(t_env.fitness(state))
+    print(t_env.act(state, 1))
