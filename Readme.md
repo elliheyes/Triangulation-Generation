@@ -29,7 +29,6 @@ model = tfk.Sequential([
     Dense(128, activation='relu'),
     Dense(s_env.num_actions, activation='linear')
 ])
-target_model = tfk.models.clone_model(model)
 
 optim = tfk.optimizers.Adam(learning_rate = 1e-3)
 model.compile(
@@ -37,7 +36,7 @@ model.compile(
     optimizer = optim,
     metrics = [tfk.metrics.MeanAbsoluteError()])
 
-agent = Agent(model, target_model, buffer_size = 2**11)
+agent = Agent(model)
 
 # Train the agent
 train_agent(s_env, agent, num_epochs = 2048, verbosity = 1)

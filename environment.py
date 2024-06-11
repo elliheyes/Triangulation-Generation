@@ -19,7 +19,7 @@ class Environment(object):
     @abc.abstractmethod
     def random_state():
         """
-        Generates a random state (or a list thereof).
+        Generates a random state.
         """
 
     @abc.abstractmethod
@@ -51,9 +51,26 @@ class Environment(object):
 class MultiEnvironment(Environment):
     def __init__(self, environments: List[Environment]):
         self._environments = environments
+        self._state_shapes = None
+
+    def _restore_shape(self, flat_state):
+        if self._state_shapes is None:
+            self._state_shapes = [*map(lambda x: np.asarray(x.random_state()).shape, self._environments)]
+        num_envs = len(self._environments)
+
+        states = []
+        shift_counter = 0
+        for i in range(num_envs):
+            block_size = np.prod(self._state_shapes[i])
+            states.append(flat_state[shift_counter:shift_counter+block_size].reshape(self._state_shapes[i]))
+            shift_counter += block_size
+        return states
 
     def random_state(self):
-        return [*map(lambda x: x.random_state(), self._environments)]
+        states = [*map(lambda x: x.random_state(), self._environments)]
+        if self._state_shapes is None:
+            self._state_shapes = [*map(lambda x: np.asarray(x).shape, states)]
+        return np.concatenate([*map(lambda x: np.asarray(x).reshape(-1), states)])
 
     @staticmethod
     def _combine_r_vals(r_val_1, r_val_2):
@@ -63,14 +80,13 @@ class MultiEnvironment(Environment):
         """
         @params state: List of states.
         """
+        state = self._restore_shape(state)
         r_val = (0.0, True)
 
         for i, environment in enumerate(self._environments):
             r_val_curr = environment.fitness(state[i])
             r_val = self._combine_r_vals(
                 r_val_curr, r_val)
-            # r_val += r_val_curr
-            # terminated &= terminated_curr
 
         # TODO compatibility.
         # NOTE: In some cases doing one search depends if the other one is valid.
@@ -79,6 +95,8 @@ class MultiEnvironment(Environment):
         return r_val
 
     def act(self, state, action):
+        state = self._restore_shape(state)
+
         new_states = []
         r_val = (0.0, True)
         for s_curr, a_curr, env_curr in zip(state, action, self._environments):
@@ -183,6 +201,9 @@ class TriangulationEnvironment(Environment):
         self._max_num_triangs = max(len(x) for x in self._two_face_Ts)
         self._action_list = utils.get_T_actions(self._two_face_Ts)
 
+    def get_triangulation(self, state):
+        return utils.combine_triangulation(self._p, self._two_face_Ts, state)
+
     def random_state(self):
         return utils.random_T_state(self._two_face_Ts, self._max_num_triangs)
 
@@ -200,13 +221,33 @@ class TriangulationEnvironment(Environment):
 
 
 
+class FibrationEnvironment(MultiEnvironment):
+    def __init__(self, polytope: Environment, fibration_dim: int):
+        super().__init__(environments = [
+            TriangulationEnvironment(polytope),
+            SubpolytopeEnvironment(polytope, fibration_dim)
+        ])
+        self._p = polytope
+
+    def fitness(self, state):
+        fitness, done = super().fitness(state)
+
+        # TODO compatibility
+        # if done:
+            # t_src = self._t_env.get_triangulation(state[0])
+        return fitness, done
+
 if __name__ == "__main__":
     from cytools import fetch_polytopes
-    all_polys = fetch_polytopes(h11=3, lattice="N", limit=100, as_list=True)
+    all_polys = fetch_polytopes(h11=15, lattice="N", limit=100, as_list=True)
     p = all_polys[15]
 
-    t_env = TriangulationEnvironment(p)
-    state = t_env.random_state()
-    print(state)
-    print(t_env.fitness(state))
-    print(t_env.act(state, 1))
+    t = p.triangulate()
+    for t_1 in t.neighbor_triangulations():
+        print(len(t_1.neighbor_triangulations()[0].neighbor_triangulations()))
+
+    # t_env = TriangulationEnvironment(p)
+    # state = t_env.random_state()
+    # print(state)
+    # print(t_env.fitness(state))
+    # print(t_env.act(state, 1))

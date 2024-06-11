@@ -13,11 +13,11 @@ from tensorflow import keras as tfk
 
 
 class Agent(object):
-    def __init__(self, model: tfk.Sequential, target_model: tfk.Sequential, buffer_size: int):
+    def __init__(self, model: tfk.Sequential, target_model: tfk.Sequential = None, buffer_size: int = 2**11):
         """
         @param model:           Specifies the main model used for training.
-        @param target_model:    Specifies the target model which is updated after some number of training steps. Ensures stability.
-        @param buffer_size:     Size of the replay buffer.
+        @param target_model:    Specifies the target model which is updated after some number of training steps. Ensures stability. (Default: None).
+        @param buffer_size:     Size of the replay buffer. (Default: 2**11).
         """
         self._memory = deque(maxlen=buffer_size)
         self._gamma = 0.95
@@ -27,7 +27,7 @@ class Agent(object):
         self._policy_lr = 0.7
 
         self._model = model
-        self._target_model = target_model
+        self._target_model = tfk.models.clone_model(model) if target_model is None else target_model
 
         self._num_actions = model.output_shape[-1]
         self.update_target_model()
