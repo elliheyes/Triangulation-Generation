@@ -10,8 +10,8 @@ from collections import deque
 
 import numpy as np
 from tensorflow import keras as tfk
-from utils import train_agent
 from environment import Environment
+from utils import train_agent, walk_agent
 
 
 class Agent(object):
@@ -73,6 +73,13 @@ class Agent(object):
             batch_size          = batch_size,
             min_memory_size     = min_memory_size,
             verbosity           = verbosity)
+
+    def walk(self, state, env: Environment, max_steps = 32):
+        return walk_agent(
+            agent       = self,
+            state       = state,
+            env         = env,
+            max_steps   = max_steps)
 
     def replay(self, batch_size):
         """

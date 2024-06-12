@@ -327,6 +327,16 @@ class FibrationEnvironment(MultiEnvironment):
         self._p = polytope
         self._d = fibration_dim
 
+    def get_structure(self, state) -> Tuple[Triangulation, Polytope]:
+        """
+        @return A tuple consisting of:
+            1. Triangulation corresponding to the state.
+            2. A subpolytope corresponding to the state.
+        """
+        state = self._restore_shape(state)
+        return self._environments[0].get_triangulation(state[0]),\
+              Polytope(self._environments[1].intersect(state[1]))
+
     def _compatibility_fitness(self, state):
         done = True
         state = self._restore_shape(state)

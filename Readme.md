@@ -30,14 +30,14 @@ p = Polytope([
     [-1,  0, -1,  0],
     [ 0, -1, -1,  0],
     [ 0,  0,  1,  0]])
-s_env = FibrationEnvironment(p, 2)
+env = FibrationEnvironment(p, 2)
 
 # Initialize agent
 model = tfk.Sequential([
-    Input((s_env.random_state().shape[0],)),
+    Input((env.random_state().shape[0],)),
     Dense(64, activation='relu'),
     Dense(128, activation='relu'),
-    Dense(s_env.num_actions, activation='linear')
+    Dense(env.num_actions, activation='linear')
 ])
 
 optim = tfk.optimizers.Adam(learning_rate = 1e-3)
@@ -49,9 +49,16 @@ model.compile(
 agent = Agent(model)
 
 # Train the agent
-agent.fit(s_env, num_epochs = 2048, verbosity = 1)
+agent.fit(env, num_epochs = 2048, verbosity = 1)
 ```
+A terminal state can be then obtained by starting from a random state and allowing agent to walk using the trained model:
+```python
+path = agent.walk(env.random_state(), env)
 
+# Extract triangulation and subpolytope data
+triang, subpoly = env.get_structure(path[-1])
+...
+```
 
 ## Citation
 To cite our paper:
