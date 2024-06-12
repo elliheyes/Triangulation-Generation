@@ -19,17 +19,18 @@ Currently supported environments are:
 | ```SubpolytopeEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | Uses subspace encoding to generate subpolytope. | - **polytope**: Polytope.<br>- **fibration_dim**: Dimension of subpolytope. |
 | ```FibrationEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | A multi-environment, combining Triangulation and subpolytope environments for the purpose of constructing fibrations. An additional compatibility condition forces the triangulation to be consistent with the choice of subpolytope. | - **polytope**: Polytope.<br>- **fibration_dim**: Dimension of subpolytope. |
 
-An example code for generating subpolytopes is shown below:
+An example code for generating elliptic fibrations with compatible triangulations using ```FibrationEnvironment``` is shown below:
 ```python
 # Initialize Environment
 p = Polytope([
-    [ 1, 0, 0, 0],
-    [ 0, 1, 0, 0],
-    [ 0, 0, 1, 0],
-    [ 0, 0, 0, 1],
-    [-1,-1, 0, 0],
-    [-1,-1,-1,-1]])
-s_env = SubpolytopeEnvironment(p, 2)
+    [-1, -1,  1, -1],
+    [ 0,  0,  0,  1],
+    [ 0,  1,  0,  0],
+    [ 1,  0,  0,  0],
+    [-1,  0, -1,  0],
+    [ 0, -1, -1,  0],
+    [ 0,  0,  1,  0]])
+s_env = FibrationEnvironment(p, 2)
 
 # Initialize agent
 model = tfk.Sequential([
