@@ -7,11 +7,11 @@ from tqdm import trange
 from copy import deepcopy
 
 import numpy as np
-from agent import Agent
+# from agent import Agent
 from environment import Environment
 
 
-def train_agent(env: Environment, agent: Agent, num_epochs = 1024, max_steps = 32, batch_size = 128, min_memory_size = 1024, verbosity = 0) -> np.ndarray:
+def train_agent(env: Environment, agent, num_epochs = 1024, max_steps = 32, batch_size = 128, min_memory_size = 1024, verbosity = 0) -> np.ndarray:
     """
     @return Array of (epochs, loss_vals). Shape: (Num_epochs, 2).
     """
@@ -62,7 +62,7 @@ def train_agent(env: Environment, agent: Agent, num_epochs = 1024, max_steps = 3
     return np.asarray(loss_vals)
 
 
-def walk_agent(state, env: Environment, agent: Agent, max_steps = 32):
+def walk_agent(state, env: Environment, agent, max_steps = 32):
     path = [state]
     for _ in range(max_steps):
         action = agent.act(state)

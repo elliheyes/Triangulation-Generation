@@ -10,6 +10,8 @@ from collections import deque
 
 import numpy as np
 from tensorflow import keras as tfk
+from utils import train_agent
+from environment import Environment
 
 
 class Agent(object):
@@ -61,6 +63,16 @@ class Agent(object):
         state = np.expand_dims(state.flatten(), axis=0)
         Q_a = self._model(state)
         return np.argmax(Q_a)
+
+    def fit(self, env: Environment, num_epochs = 1024, max_steps = 32, batch_size = 128, min_memory_size = 1024, verbosity = 0):
+        return train_agent(
+            agent               = self,
+            env                 = env,
+            num_epochs          = num_epochs,
+            max_steps           = max_steps,
+            batch_size          = batch_size,
+            min_memory_size     = min_memory_size,
+            verbosity           = verbosity)
 
     def replay(self, batch_size):
         """

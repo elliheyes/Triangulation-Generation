@@ -17,6 +17,7 @@ Currently supported environments are:
 | ```TriangulationEnvironment(```<br>&ensp;```polytope)```| Uses two-face encoding for generating triangulations. | - **polytope**: Polytope. |
 | ```HTriangulationEnvironment(```<br>&ensp;```polytope)``` | Uses height encoding for generating triangulations. | - **polytope**: Polytope. |
 | ```SubpolytopeEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | Uses subspace encoding to generate subpolytope. | - **polytope**: Polytope.<br>- **fibration_dim**: Dimension of subpolytope. |
+| ```FibrationEnvironment(```<br>&ensp;```polytope, fibration_dim)``` | A multi-environment, combining Triangulation and subpolytope environments for the purpose of constructing fibrations. An additional compatibility condition forces the triangulation to be consistent with the choice of subpolytope. | - **polytope**: Polytope.<br>- **fibration_dim**: Dimension of subpolytope. |
 
 An example code for generating subpolytopes is shown below:
 ```python
@@ -47,7 +48,7 @@ model.compile(
 agent = Agent(model)
 
 # Train the agent
-train_agent(s_env, agent, num_epochs = 2048, verbosity = 1)
+agent.fit(s_env, num_epochs = 2048, verbosity = 1)
 ```
 
 

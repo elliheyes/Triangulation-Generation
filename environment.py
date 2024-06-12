@@ -12,6 +12,7 @@ from Elli import utils
 
 import numpy as np
 from cytools import Polytope
+from cytools.triangulation import Triangulation
 from notebooks.integer_rref import i4mat_rref
 
 
@@ -32,10 +33,10 @@ class Environment(object):
         """
 
     @abc.abstractmethod
-    def act(self, state, action) -> Tuple[List, float]:
+    def act(self, state, action: int) -> Tuple[List, float]:
         """
         @param state: Current state.
-        @param action: Action using which to act on the state.
+        @param action: Index of the action using which to act on the state.
 
         @return Tuple (next state, fitness of the next state).
         """
@@ -66,11 +67,14 @@ class MultiEnvironment(Environment):
             shift_counter += block_size
         return states
 
+    def _flatten_state(self, state):
+        return np.concatenate([*map(lambda x: np.asarray(x).reshape(-1), state)])
+
     def random_state(self):
         states = [*map(lambda x: x.random_state(), self._environments)]
         if self._state_shapes is None:
             self._state_shapes = [*map(lambda x: np.asarray(x).shape, states)]
-        return np.concatenate([*map(lambda x: np.asarray(x).reshape(-1), states)])
+        return self._flatten_state(states)
 
     @staticmethod
     def _combine_r_vals(r_val_1, r_val_2):
@@ -87,25 +91,37 @@ class MultiEnvironment(Environment):
             r_val_curr = environment.fitness(state[i])
             r_val = self._combine_r_vals(
                 r_val_curr, r_val)
-
-        # TODO compatibility.
-        # NOTE: In some cases doing one search depends if the other one is valid.
-        # TODO: make it into a graph with (u->v)∈E if v depends on u. Pass path to root.
-
         return r_val
 
     def act(self, state, action):
         state = self._restore_shape(state)
+        # Map action over the list.
+        action_nums = [*map(lambda x: x.num_actions, self._environments)]
+
+        # idx = x1 + x2 L1 + x3 L1 L2 + x4 L1 L2 L3
+
+        # x1 = idx % L1
+        # idx = (idx - x1) / L1
+        # # idx = x2 + x3 L2 + ...
+        # x2 = idx % L2
+        # idx = (idx - x2) / L2
+        # ...
+
+        actions = []
+        action_idx = action
+        for i in range(len(action_nums)):
+            actions.append(action_idx % action_nums[i])
+            action_idx = (action_idx - actions[-1])//action_nums[i]
 
         new_states = []
         r_val = (0.0, True)
-        for s_curr, a_curr, env_curr in zip(state, action, self._environments):
+        for s_curr, a_curr, env_curr in zip(state, actions, self._environments):
             new_state, r_val_curr = env_curr.act(s_curr, a_curr)
 
             new_states.append(new_state)
             r_val = self._combine_r_vals(
                 r_val_curr, r_val)
-        return new_states, r_val
+        return self._flatten_state(new_states), r_val
 
     def add(self, other: Environment):
         """
@@ -143,7 +159,7 @@ class SubpolytopeEnvironment(Environment):
 
     def intersect(self, state):
         vertices_basis = []
-        for pt_id in state:
+        for pt_id in np.asarray(state, np.int32):
             vertices_basis.append(self._points[pt_id])
 
         vertices_basis = np.asarray(vertices_basis)
@@ -226,11 +242,14 @@ class HTriangulationEnvironment(Environment):
         self._num_actions = polytope.points().shape[0]
         self._step_size = step_size
 
+    def get_triangulation(self, state):
+        return self._p.triangulate(heights = state, check_heights = False)
+
     def random_state(self):
         return np.random.random(self._num_actions)
 
     def fitness(self, state):
-        triang = self._p.triangulate(heights = state, check_heights=False)
+        triang = self.get_triangulation(state)
 
         reward = -1.0
         if triang.is_fine():
@@ -258,21 +277,106 @@ class HTriangulationEnvironment(Environment):
         return self._num_actions*2
 
 
+# TODO: Move into the class
+def get_indices(p, subp):
+    return [np.where(np.all(v == p, axis=1))[0][0] for v in subp]
+
+def boundary(simplices):
+    dsimplices = []
+    for s in simplices:
+        for i in range(1, len(s)):
+            dsimplices.append(
+                np.append(s[:i], s[(i+1):]))
+
+    dsimplices = np.asarray(dsimplices)
+    return dsimplices
+
+def restrict(dsimplices, subp_vertices):
+    sub_simplices = np.where(np.all(np.isin(dsimplices, subp_vertices), axis=1))[0]
+    sub_simplices = dsimplices[sub_simplices]
+
+    local_sub_simplices = []
+    for s in sub_simplices:
+        local_s = []
+        for v in s:
+            local_s.append(np.where(subp_vertices == v)[0][0])
+        local_sub_simplices.append(local_s)
+    return np.unique(local_sub_simplices, axis=0)
+
+def project(vertices):
+    vertices_copy = np.array(vertices, copy=True)
+    W = np.asarray(i4mat_rref(vertices.shape[0], vertices.shape[1], vertices_copy)[0]).astype(np.float64)
+    local_vertices = np.round(vertices@np.linalg.pinv(W))
+    idx = np.argwhere(np.all(local_vertices[..., :] == 0, axis=0))
+
+    return np.delete(local_vertices, idx, axis=1)
+
+def compose(x, *args):
+    out = x
+    for f in args:
+        out = f(out)
+    return out
+
+
 class FibrationEnvironment(MultiEnvironment):
     def __init__(self, polytope: Environment, fibration_dim: int):
         super().__init__(environments = [
-            TriangulationEnvironment(polytope),
+            HTriangulationEnvironment(polytope),
             SubpolytopeEnvironment(polytope, fibration_dim)
         ])
         self._p = polytope
+        self._d = fibration_dim
+
+    def _compatibility_fitness(self, state):
+        done = True
+        state = self._restore_shape(state)
+        r_compatibility = 0.0
+        if done:
+            triang = self._environments[0].get_triangulation(state[0])
+            vertices = self._environments[1].intersect(state[1])
+
+            subsimplices = restrict(
+                dsimplices = compose(triang.simplices(), *([boundary]*(self._p.dimension() - self._d))), #boundary(t.simplices()),
+                subp_vertices = get_indices(
+                    self._p.points(), Polytope(vertices).points()))
+
+            triang_pts = project(Polytope(vertices).points())
+
+            subpoly = Polytope(np.asarray(triang_pts, np.int32))
+            triang_pts_idx = subpoly.points_to_indices(triang_pts)
+
+            t_sub = Triangulation(
+                poly = subpoly,
+                pts = triang_pts_idx,
+                simplices = subsimplices,
+                check_input_simplices=False)
+
+            # Verify fine condition
+            t_valid = t_sub.is_valid()
+            if t_valid:
+                for cond in [t_sub.is_fine(), t_sub.is_regular(), t_sub.is_star()]:
+                    r_compatibility += (1 if cond else -1)
+                    t_valid = t_valid and cond
+            done &= t_valid
+
+            return r_compatibility, done
 
     def fitness(self, state):
-        fitness, done = super().fitness(state)
+        r_val = super().fitness(state)
+        if r_val[-1]:
+            r_val = self._combine_r_vals(
+                r_val,
+                self._compatibility_fitness(state))
+        return r_val
 
-        # TODO compatibility
-        # if done:
-            # t_src = self._t_env.get_triangulation(state[0])
-        return fitness, done
+    def act(self, state, action):
+        new_state, r_val = super().act(state, action)
+        if r_val[-1]:
+            r_val = self._combine_r_vals(
+                r_val,
+                self._compatibility_fitness(new_state))
+        return new_state, r_val
+
 
 if __name__ == "__main__":
     from cytools import fetch_polytopes
