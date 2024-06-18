@@ -237,10 +237,16 @@ class TriangulationEnvironment(Environment):
 
 
 class HTriangulationEnvironment(Environment):
-    def __init__(self, polytope: Polytope, step_size: float = 0.5):
+    def __init__(self, polytope: Polytope, step_size: float = 0.5, check_star = True):
+        """
+        @param polytope: Polytope.
+        @param step_size: Specifies size of each step in the height space. (default: 0.5)
+        @param check_star: If True, checks if the triangulation is star. (default: True)
+        """
         self._p = polytope
         self._num_actions = polytope.points().shape[0]
         self._step_size = step_size
+        self._check_star = check_star
 
     def get_triangulation(self, state):
         return self._p.triangulate(heights = state, check_heights = False)
@@ -252,15 +258,23 @@ class HTriangulationEnvironment(Environment):
         triang = self.get_triangulation(state)
 
         reward = -1.0
+        is_frst = True
+
         if triang.is_fine():
-            reward += 1.5
-        if triang.is_star():
-            reward += 1.5
+            reward += 3.0
+        else:
+            is_frst = False
+        if self._check_star:
+            if triang.is_star():
+                reward += 3.0
+            else:
+                is_frst = False
+
         # # Always true
         # if triang.is_regular():
         #     reward += 1.0
 
-        return reward, reward == 2.0
+        return reward, is_frst
 
     def act(self, state, action):
         shift = np.zeros(self._num_actions)
@@ -319,13 +333,14 @@ def compose(x, *args):
 
 
 class FibrationEnvironment(MultiEnvironment):
-    def __init__(self, polytope: Environment, fibration_dim: int):
+    def __init__(self, polytope: Environment, fibration_dim: int, check_star = True):
         super().__init__(environments = [
-            HTriangulationEnvironment(polytope),
+            HTriangulationEnvironment(polytope, check_star = check_star),
             SubpolytopeEnvironment(polytope, fibration_dim)
         ])
         self._p = polytope
         self._d = fibration_dim
+        self._check_star = check_star
 
     def get_structure(self, state) -> Tuple[Triangulation, Polytope]:
         """
@@ -364,7 +379,7 @@ class FibrationEnvironment(MultiEnvironment):
             # Verify fine condition
             t_valid = t_sub.is_valid()
             if t_valid:
-                for cond in [t_sub.is_fine(), t_sub.is_regular(), t_sub.is_star()]:
+                for cond in [t_sub.is_fine(), t_sub.is_regular()] + ([t_sub.is_star()] if self._check_star else []): # is_star is no longer enforced
                     r_compatibility += (1 if cond else -1)
                     t_valid = t_valid and cond
             done &= t_valid
